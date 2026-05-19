@@ -232,7 +232,10 @@ def transcribe(input_file, model_name='large-v3', project_folder='tmp'):
             if parsed and len(parsed) > 0:
                 start_segments = parsed
                 alignment_only = True
-                detected_language = 'en'
+                # Infer language from subtitle filename (e.g. input.ar.srt → 'ar')
+                sub_basename = os.path.basename(sub_path)
+                lang_match = re.search(r'input\.([a-z]{2,3})(?:\.|$)', sub_basename)
+                detected_language = lang_match.group(1) if lang_match else 'en'
 
         result = None
 

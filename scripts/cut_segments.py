@@ -87,16 +87,25 @@ def cut(segments, project_folder="tmp", skip_video=False):
                  start_time_seconds = start_time
                  start_time_str = f"{start_time_seconds:.3f}"
             else:
-                # String "00:00:00" ou "12.34"
+                # String "00:00:00" or "12.34"
                 try:
                     start_time_seconds = float(start_time)
                     start_time_str = f"{start_time_seconds:.3f}"
-                except:
-                    # Se for HH:MM:SS, ffmpeg aceita, mas precisamos converter para float para o json cutter
-                    # Função auxiliar simples
-                    h, m, s = str(start_time).split(':')
-                    start_time_seconds = int(h) * 3600 + int(m) * 60 + float(s)
-                    start_time_str = str(start_time)
+                except (ValueError, TypeError):
+                    try:
+                        parts = str(start_time).split(':')
+                        if len(parts) == 3:
+                            h, m, s = parts
+                            start_time_seconds = int(h) * 3600 + int(m) * 60 + float(s)
+                        elif len(parts) == 2:
+                            m, s = parts
+                            start_time_seconds = int(m) * 60 + float(s)
+                        else:
+                            raise ValueError(f"Unrecognised start_time format: {start_time}")
+                        start_time_str = f"{start_time_seconds:.3f}"
+                    except Exception as parse_err:
+                        print(f"[ERROR] Could not parse start_time '{start_time}': {parse_err} — skipping segment {i}")
+                        continue
 
             # Título para nome de arquivo
             title = segment.get("title", f"Segment_{i}")

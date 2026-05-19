@@ -76,7 +76,6 @@ def generate_ass_from_file(input_path, output_path, project_folder,
     """
     
     # 1. Load Timeline Data (if exists)
-    # 1. Load Timeline Data (if exists)
     filename = os.path.basename(input_path)
     base_name = os.path.splitext(filename)[0]
 
@@ -132,7 +131,8 @@ def generate_ass_from_file(input_path, output_path, project_folder,
             json_data = json.load(file)
         
         segments_count = len(json_data.get('segments', []))
-        print(f"[DEBUG] Loaded {input_path}: Found {segments_count} segments.")
+        if segments_count == 0:
+            print(f"[WARNING] No segments found in {input_path}")
     except Exception as e:
         print(f"[ERROR] Loading JSON {input_path}: {e}")
         return
@@ -342,9 +342,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     total_lines_written += 1
     
     if total_lines_written == 0:
-        print(f"[WARN] No dialogue lines written for {input_path}")
-    else:
-        print(f"[DEBUG] Wrote {total_lines_written} lines to {output_path}")
+        print(f"[WARNING] No dialogue lines written for {input_path}")
 
 
 def adjust(base_color, base_size, highlight_size, highlight_color, words_per_block, gap_limit, mode, vertical_position, alignment, font, outline_color, shadow_color, bold, italic, underline, strikeout, border_style, outline_thickness, shadow_size, uppercase=False, project_folder="tmp", **kwargs):
@@ -372,7 +370,6 @@ def adjust(base_color, base_size, highlight_size, highlight_color, words_per_blo
         except Exception as e:
             print(f"Could not load face modes: {e}")
 
-    # Process all JSON files in input directory
     # Process all JSON files in input directory
     if not os.path.exists(input_dir):
         print(f"[ERROR] Subtitle folder missing: {input_dir}")

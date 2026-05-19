@@ -56,62 +56,33 @@ current_process = None
 
 # Helpers
 def convert_color_to_ass(hex_color, alpha="00"):
-    try:
-        with open("debug_colors.log", "a") as f:
-             f.write(f"INPUT: '{hex_color}'\n")
-    except: pass
-
     if not hex_color:
         return f"&H{alpha}FFFFFF&"
-    
+
     hex_clean = hex_color.lstrip('#').strip()
-    
+
     # Handle rgb/rgba format: rgb(255, 215, 0)
     if hex_clean.lower().startswith("rgb"):
         try:
-            # Extract numbers including floats
             nums = re.findall(r"[\d\.]+", hex_clean)
             if len(nums) >= 3:
-                r = int(float(nums[0]))
-                g = int(float(nums[1]))
-                b = int(float(nums[2]))
-                # Clamp
-                r = max(0, min(255, r))
-                g = max(0, min(255, g))
-                b = max(0, min(255, b))
-                # Convert to hex
-                ret = f"&H{alpha}{b:02X}{g:02X}{r:02X}&".upper()
-                try:
-                    with open("debug_colors.log", "a") as f:
-                         f.write(f"PARSED RGB: {ret}\n")
-                except: pass
-                return ret
-        except Exception as e:
-            try:
-                with open("debug_colors.log", "a") as f:
-                     f.write(f"RGB ERROR: {e}\n")
-            except: pass
+                r = max(0, min(255, int(float(nums[0]))))
+                g = max(0, min(255, int(float(nums[1]))))
+                b = max(0, min(255, int(float(nums[2]))))
+                return f"&H{alpha}{b:02X}{g:02X}{r:02X}&".upper()
+        except Exception:
+            pass
 
     # Handle 3-digit hex (e.g. F00 -> FF0000)
     if len(hex_clean) == 3:
         hex_clean = "".join([c*2 for c in hex_clean])
-        
+
     if len(hex_clean) == 6:
         r = hex_clean[0:2]
         g = hex_clean[2:4]
         b = hex_clean[4:6]
-        # Uppercase just in case
-        ret = f"&H{alpha}{b}{g}{r}&".upper() 
-        try:
-            with open("debug_colors.log", "a") as f:
-                 f.write(f"PARSED HEX: {ret}\n")
-        except: pass
-        return ret
-        
-    try:
-        with open("debug_colors.log", "a") as f:
-             f.write(f"INVALID: Defaulting to White\n")
-    except: pass
+        return f"&H{alpha}{b}{g}{r}&".upper()
+
     return f"&H{alpha}FFFFFF&"
 
 def kill_process():
@@ -431,46 +402,46 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                 with gr.Column(scale=1):
                     with gr.Row():
                         ai_backend_input = gr.Dropdown(choices=[(i18n("Gemini"), "gemini"), (i18n("G4F"), "g4f"), (i18n("Local (GGUF)"), "local"), (i18n("Manual"), "manual")], label=i18n("AI Backend"), value="gemini", scale=2)
-                        _default_api_key = ""
-                        try:
-                            import json as _json
-                            with open(os.path.join(WORKING_DIR, "api_config.json"), "r") as _f:
-                                _default_api_key = _json.load(_f).get("gemini", {}).get("api_key", "")
-                        except Exception:
-                            pass
+                        _default_api_key = os.environ.get("GEMINI_API_KEY", "")
+                        if not _default_api_key:
+                            try:
+                                import json as _json
+                                with open(os.path.join(WORKING_DIR, "api_config.json"), "r") as _f:
+                                    _default_api_key = _json.load(_f).get("gemini", {}).get("api_key", "")
+                            except Exception:
+                                pass
                         api_key_input = gr.Textbox(label=i18n("Gemini API Key"), type="password", scale=3, value=_default_api_key)
                     
                     # New Dynamic Inputs
                     with gr.Row():
-                        ai_model_input = gr.Dropdown(choices=GEMINI_MODELS, label=i18n("AI Model"), value=GEMINI_MODELS[1], allow_custom_value=True, visible=True, scale=5)
+                        ai_model_input = gr.Dropdown(choices=GEMINI_MODELS, label=i18n("AI Model"), value="gemini-2.0-flash", allow_custom_value=True, visible=True, scale=5)
                         refresh_models_btn = gr.Button("🔄", size="sm", visible=False, scale=0, min_width=50) # Only local
-                        chunk_size_input = gr.Number(label=i18n("Chunk Size"), value=70000, precision=0, scale=2)
+                        chunk_size_input = gr.Number(label=i18n("Chunk Size"), value=20000, precision=0, scale=2)
                     
                     # Update listeners with logic to hide/show API key
                     def update_ai_ui(backend):
                         show_api = (backend == "gemini")
                         show_refresh = (backend == "local")
-                        
-                        # Definições padrão para evitar que fiquem vazios
+
                         new_choices = []
                         new_val = ""
-                        new_chunk = 70000
-                        
+                        new_chunk = 20000
+
                         if backend == "gemini":
                             new_choices = GEMINI_MODELS
-                            new_val = GEMINI_MODELS[1]
-                            new_chunk = 70000
+                            new_val = "gemini-2.0-flash"
+                            new_chunk = 20000
                         elif backend == "g4f":
                             new_choices = G4F_MODELS
                             new_val = G4F_MODELS[5]
-                            new_chunk = 70000
+                            new_chunk = 20000
                         elif backend == "local":
                             models = get_local_models()
                             new_choices = models if models else [i18n("No models found")]
                             new_val = new_choices[0]
                             new_chunk = 30000
-                        else: # Manual
-                             pass
+                        else:  # Manual
+                            pass
 
                         return (
                             gr.update(visible=show_api), # API Key Visibility (Fixes hole 1)
