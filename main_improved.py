@@ -356,20 +356,26 @@ def main():
                     ai_backend = "manual"
 
         api_key = args.api_key
-        # Priority: CLI arg > env var GEMINI_API_KEY > api_config.json
+        # Priority: CLI arg > env var > api_config.json
         if ai_backend == "gemini" and not api_key:
             api_key = os.environ.get("GEMINI_API_KEY", "")
         if ai_backend == "gemini" and not api_key:
             cfg_key = api_config.get("gemini", {}).get("api_key", "")
             if cfg_key and cfg_key not in ("", "SUA_KEY_AQUI"):
                 api_key = cfg_key
+        if ai_backend == "deepseek" and not api_key:
+            api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        if ai_backend == "deepseek" and not api_key:
+            cfg_key = api_config.get("deepseek", {}).get("api_key", "")
+            if cfg_key:
+                api_key = cfg_key
 
-        if ai_backend == "gemini" and not api_key:
+        if ai_backend in ("gemini", "deepseek") and not api_key:
             if args.skip_prompts:
-                print("[WARNING] Gemini API key missing and skip-prompts is ON — pipeline may fail.")
+                print(f"[WARNING] {ai_backend} API key missing and skip-prompts is ON — pipeline may fail.")
             else:
-                print("[ERROR] Gemini API key not found in args, GEMINI_API_KEY env var, or api_config.json.")
-                api_key = input("Enter your Gemini API Key: ").strip()
+                print(f"[ERROR] {ai_backend} API key not found in args, env var, or api_config.json.")
+                api_key = input(f"Enter your {ai_backend.title()} API Key: ").strip()
 
     # Workflow & Face Config Inputs
     workflow_choice = args.workflow

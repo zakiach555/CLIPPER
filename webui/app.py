@@ -110,6 +110,11 @@ GEMINI_MODELS = [
     'gemini-2.0-flash-lite'
 ]
 
+DEEPSEEK_MODELS = [
+    'deepseek-chat',
+    'deepseek-reasoner',
+]
+
 G4F_MODELS = [
     'gpt-4o',
     'gpt-4o-mini',
@@ -401,7 +406,7 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                         max_dur_input = gr.Number(label=i18n("Max Duration (s)"), value=90)
                 with gr.Column(scale=1):
                     with gr.Row():
-                        ai_backend_input = gr.Dropdown(choices=[(i18n("Gemini"), "gemini"), (i18n("G4F"), "g4f"), (i18n("Local (GGUF)"), "local"), (i18n("Manual"), "manual")], label=i18n("AI Backend"), value="gemini", scale=2)
+                        ai_backend_input = gr.Dropdown(choices=[(i18n("Gemini"), "gemini"), ("DeepSeek", "deepseek"), (i18n("G4F"), "g4f"), (i18n("Local (GGUF)"), "local"), (i18n("Manual"), "manual")], label=i18n("AI Backend"), value="gemini", scale=2)
                         _default_api_key = os.environ.get("GEMINI_API_KEY", "")
                         if not _default_api_key:
                             try:
@@ -410,7 +415,7 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                                     _default_api_key = _json.load(_f).get("gemini", {}).get("api_key", "")
                             except Exception:
                                 pass
-                        api_key_input = gr.Textbox(label=i18n("Gemini API Key"), type="password", scale=3, value=_default_api_key)
+                        api_key_input = gr.Textbox(label=i18n("API Key"), type="password", scale=3, value=_default_api_key)
                     
                     # New Dynamic Inputs
                     with gr.Row():
@@ -420,7 +425,7 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                     
                     # Update listeners with logic to hide/show API key
                     def update_ai_ui(backend):
-                        show_api = (backend == "gemini")
+                        show_api = (backend in ("gemini", "deepseek"))
                         show_refresh = (backend == "local")
 
                         new_choices = []
@@ -430,6 +435,10 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                         if backend == "gemini":
                             new_choices = GEMINI_MODELS
                             new_val = "gemini-2.0-flash"
+                            new_chunk = 20000
+                        elif backend == "deepseek":
+                            new_choices = DEEPSEEK_MODELS
+                            new_val = "deepseek-chat"
                             new_chunk = 20000
                         elif backend == "g4f":
                             new_choices = G4F_MODELS
