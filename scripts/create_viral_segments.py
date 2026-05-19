@@ -196,37 +196,58 @@ def preprocess_transcript_for_ai(segments):
 
     return full_text.strip()
 
-def call_gemini(prompt, api_key, model_name='gemini-2.5-flash-lite-preview-09-2025'):
+def call_gemini(prompt, api_key, model_name='gemini-2.0-flash'):
     if not HAS_GEMINI:
         raise ImportError("A biblioteca 'google-generativeai' não está instalada. Instale com: pip install google-generativeai")
-    
+
     genai.configure(api_key=api_key)
-    # Usando modelo definido na config ou o padrão
-    model = genai.GenerativeModel(model_name) 
-    
+
+    # Request JSON output directly — avoids thinking-mode preamble on 2.5 models
+    generation_config = {"response_mime_type": "application/json"}
+    model = genai.GenerativeModel(model_name, generation_config=generation_config)
+
     max_retries = 5
     base_wait = 30
 
     for attempt in range(max_retries):
         try:
             response = model.generate_content(prompt)
-            return response.text
+
+            # response.text may be None on thinking models — collect parts manually
+            text = None
+            try:
+                text = response.text
+            except Exception:
+                pass
+
+            if not text:
+                # Fallback: concatenate all text parts from candidates
+                try:
+                    parts = []
+                    for candidate in response.candidates:
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                parts.append(part.text)
+                    text = "".join(parts)
+                except Exception:
+                    pass
+
+            return text or "{}"
+
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "Quota exceeded" in error_str:
                 wait_time = base_wait * (attempt + 1)
-                
                 match = re.search(r"retry in (\d+(\.\d+)?)s", error_str)
                 if match:
                     wait_time = float(match.group(1)) + 5.0
-                
                 print(f"[429] Quota Exceeded. Waiting {wait_time:.2f}s before retry {attempt+1}/{max_retries}...", flush=True)
                 time.sleep(wait_time)
                 continue
             else:
                 print(f"Erro na API do Gemini: {e}")
                 return "{}"
-    
+
     print("Falha após max retries no Gemini.")
     return "{}"
 
