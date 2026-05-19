@@ -62,9 +62,10 @@ def burn_video_file(video_path, subtitle_path, output_path):
         run_ffmpeg("libx264", "fast")
         return True, "CPU Success"
     except subprocess.CalledProcessError as e2:
-        err_msg = f"ERRO FATAL ao queimar legendas em {os.path.basename(video_path)}: {e2}"
+        err_msg = f"[ERROR] Failed to burn subtitles into {os.path.basename(video_path)}: {e2}"
         if e2.stderr:
-            err_msg += f" | FFmpeg Log: {e2.stderr.decode('utf-8')}"
+            stderr_text = e2.stderr.decode('utf-8', errors='replace')
+            err_msg += f"\n  FFmpeg: {stderr_text.strip()}"
         print(err_msg)
         return False, err_msg
     except Exception as e:
@@ -86,13 +87,13 @@ def burn(project_folder="tmp"):
     os.makedirs(output_folder, exist_ok=True)
     
     if not os.path.exists(videos_folder):
-        print(f"Pasta de vídeos finais não encontrada: {videos_folder}")
+        print(f"[ERROR] Final videos folder not found: {videos_folder}")
         return
 
     # Itera sobre os arquivos de vídeo na pasta final
     files = os.listdir(videos_folder)
     if not files:
-        print("Nenhum arquivo encontrado em 'final' para queimar legendas.")
+        print("[WARNING] No video files found in 'final' folder — nothing to burn.")
         return
 
     for video_file in files:
@@ -118,11 +119,11 @@ def burn(project_folder="tmp"):
                 # Define o caminho de saída para o vídeo com legendas
                 output_file = os.path.join(output_folder, f"{video_name}_subtitled.mp4")
 
-                print(f"Burning: {video_name}...")
+                print(f"  Burning subtitles: {video_name}...")
                 success, msg = burn_video_file(os.path.join(videos_folder, video_file), subtitle_file, output_file)
                 if success:
-                    print(f"Done: {output_file}")
+                    print(f"  Done: {os.path.basename(output_file)}")
                 else:
-                    print(f"Fail: {msg}")
+                    print(f"  [ERROR] Burn failed: {msg}")
             else:
-                print(f"Legenda não encontrada para: {video_name} em {subtitle_file}")
+                print(f"  [WARNING] No subtitle file found for: {video_name} (expected: {os.path.basename(subtitle_file)})")

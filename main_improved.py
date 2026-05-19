@@ -42,6 +42,11 @@ COLORS = {
     "grey": "808080",     # Grey
 }
 
+def _step(n, total, label):
+    print(f"\n{'='*52}")
+    print(f"  STEP {n}/{total}  —  {label}")
+    print(f"{'='*52}")
+
 def get_subtitle_config(config_path=None):
     """
     Returns the subtitle configuration dictionary.
@@ -405,14 +410,14 @@ def main():
     # Pipeline Execution
     try:
         # 1. Download & Project Setup
-        print(f"DEBUG: Checking input_video state. input_video={input_video}")
+        print(f"  Input video: {input_video or 'none (will download)'}")
         
         if not input_video:
             if not url:
                 print(i18n("Error: No URL provided and no existing video selected."))
                 sys.exit(1)
                 
-            print(i18n("Starting download..."))
+            _step(1, 6, "Download"); print(i18n("Starting download..."))
             download_subs = not args.skip_youtube_subs
             download_result = download_video.download(url, download_subs=download_subs, quality=args.video_quality)
             
@@ -422,11 +427,11 @@ def main():
                 input_video = download_result
                 project_folder = os.path.dirname(input_video)
                 
-            print(f"DEBUG: Download finished. input_video={input_video}, project_folder={project_folder}")
+            print(f"  Video ready: {input_video}")
             
         else:
             # Reuso de video existente
-            print("DEBUG: Using existing video logic.")
+            print(f"  Using existing video: {input_video}")
             project_folder = os.path.dirname(input_video)
             
         print(f"Project Folder: {project_folder}")
@@ -438,7 +443,7 @@ def main():
             # Actually 'adjust_subtitles' reads from 'project_folder/subs'.
             # viral_segments = True # Removed to avoid overwritting dict loaded earlier
         else:
-            print(i18n("Transcribing with model {}...").format(args.model))
+            _step(2, 6, f"Transcription  [{args.model}]"); print(i18n("Transcribing with model {}...").format(args.model))
             # Se skip config, args.model é default
             srt_file, tsv_file = transcribe_video.transcribe(input_video, args.model, project_folder=project_folder)
  
@@ -466,7 +471,7 @@ def main():
                             print(i18n("Error loading existing JSON: {}.").format(e))
                     
                 if not viral_segments:
-                    print(i18n("Creating viral segments using {}...").format(ai_backend.upper()))
+                    _step(3, 6, f"AI Segment Selection  [{ai_backend.upper()}]"); print(i18n("Creating viral segments using {}...").format(ai_backend.upper()))
                     viral_segments = create_viral_segments.create(
                         num_segments, 
                         viral_mode, 
@@ -481,9 +486,9 @@ def main():
                     )
                 
                 if not viral_segments or not viral_segments.get("segments"):
-                    print(i18n("Error: No viral segments were generated."))
-                    print(i18n("Possible reasons: API error, Model not found, or empty response."))
-                    print(i18n("Stopping execution."))
+                    print("\n[ERROR] No viral segments were generated.")
+                    print("  Possible causes: invalid API key, model unavailable, or Gemini returned an unexpected response.")
+                    print("  Check the raw response file in the project folder for details.\n")
                     sys.exit(1)
                 
                 save_json.save_viral_segments(viral_segments, project_folder=project_folder) 
@@ -540,19 +545,19 @@ def main():
             if skip_cutting:
                 print(i18n("Skipping Video Rendering (using existing cuts), but updating Subtitle JSONs..."))
             else:
-                print(i18n("Cutting segments..."))
+                _step(4, 6, "Cutting Segments"); print(i18n("Cutting segments..."))
 
             cut_segments.cut(viral_segments, project_folder=project_folder, skip_video=skip_cutting)
         
         # 5. Workflow Check
         if workflow_choice == "2":
             print(i18n("Cut Only selected. Skipping Face Crop and Subtitles."))
-            print(i18n(f"Process completed! Check your results in: {project_folder}"))
+            print(f"\n{'='*52}\n  ALL DONE!  Results in: {project_folder}\n{'='*52}\n")
             sys.exit(0)
 
         # 5. Edit Video (Face Crop)
         if workflow_choice != "3":
-            print(i18n("Editing video with {} (Mode: {})...").format(face_model, face_mode))
+            _step(5, 6, f"Face Crop  [{face_model} / mode: {face_mode}]"); print(i18n("Editing video with {} (Mode: {})...").format(face_model, face_mode))
             
             # Parse dead zone safely
             try:
@@ -624,7 +629,7 @@ def main():
         # 6. Subtitles
         burn_subtitles_option = True 
         if burn_subtitles_option:
-            print(i18n("Processing subtitles..."))
+            _step(6, 6, "Subtitles"); print(i18n("Processing subtitles..."))
             # transcribe_cuts removido: JSON de legenda já é gerado no corte
             # transcribe_cuts.transcribe(project_folder=project_folder)
             
@@ -713,7 +718,7 @@ def main():
             print(i18n("Error saving configuration JSON: {}").format(e))
         # -------------------------------------
 
-        print(i18n("Process completed! Check your results in: {}").format(project_folder))
+        print(f"\n{'='*52}\n  ALL DONE!  Results in: {project_folder}\n{'='*52}\n")
 
     except Exception as e:
         print(i18n("\nAn error occurred: {}").format(str(e)))

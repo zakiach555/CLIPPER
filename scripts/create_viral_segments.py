@@ -161,7 +161,7 @@ def clean_json_response(response_text):
                     break
                     
             if found_segments:
-                print(f"[INFO] Recuperado {len(found_segments)} segmentos de JSON truncado.")
+                print(f"[INFO] Recovered {len(found_segments)} segment(s) from truncated JSON.")
                 return {"segments": found_segments}
     except:
         pass
@@ -198,7 +198,7 @@ def preprocess_transcript_for_ai(segments):
 
 def call_gemini(prompt, api_key, model_name='gemini-2.0-flash'):
     if not HAS_GEMINI:
-        raise ImportError("A biblioteca 'google-generativeai' não está instalada. Instale com: pip install google-generativeai")
+        raise ImportError("The 'google-generativeai' library is not installed. Install it with: pip install google-generativeai")
 
     genai.configure(api_key=api_key)
 
@@ -245,15 +245,15 @@ def call_gemini(prompt, api_key, model_name='gemini-2.0-flash'):
                 time.sleep(wait_time)
                 continue
             else:
-                print(f"Erro na API do Gemini: {e}")
+                print(f"[ERROR] Gemini API error: {e}")
                 return "{}"
 
-    print("Falha após max retries no Gemini.")
+    print("[ERROR] Gemini: all retry attempts failed. Check your API key and quota.")
     return "{}"
 
 def call_g4f(prompt, model_name="gpt-4o-mini"):
     if not HAS_G4F:
-        raise ImportError("A biblioteca 'g4f' não está instalada. Instale com: pip install g4f")
+        raise ImportError("The 'g4f' library is not installed. Install it with: pip install g4f")
     
     max_retries = 3
     base_wait = 5
@@ -279,7 +279,7 @@ def call_g4f(prompt, model_name="gpt-4o-mini"):
                 return json.dumps(response)
 
             if not response:
-                print(f"[WARN] G4F retornou resposta vazia. Tentativa {attempt+1}/{max_retries}")
+                print(f"[WARNING] G4F returned an empty response. Attempt {attempt+1}/{max_retries}")
                 time.sleep(base_wait)
                 continue
             
@@ -292,12 +292,12 @@ def call_g4f(prompt, model_name="gpt-4o-mini"):
                 return str(response)
             
         except Exception as e:
-            print(f"[WARN] Erro na API do G4F (Tentativa {attempt+1}/{max_retries}): {e}")
+            print(f"[WARNING] G4F API error (attempt {attempt+1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 wait_time = base_wait * (2 ** attempt)
                 time.sleep(wait_time)
             
-    print(f"Falha crítica após {max_retries} tentativas no G4F.")
+    print(f"[ERROR] G4F: all {max_retries} attempts failed.")
     return "{}"
 
 def load_transcript(project_folder):
@@ -451,13 +451,13 @@ def process_segments(raw_segments, transcript_segments, min_duration, max_durati
             
             # Validate Duration (Min)
             if duration < tempo_minimo: 
-                print(f"[WARN] Segmento menor que duration min ({duration:.2f}s < {tempo_minimo}s). Estendendo para {tempo_minimo}s.")
+                print(f"[WARNING] Segment too short ({duration:.2f}s < min {tempo_minimo}s) — extending to {tempo_minimo}s.")
                 duration = tempo_minimo
                 final_end_time = final_start_time + duration
             
             # Validate Duration (Max)
             if duration > tempo_maximo:
-                print(f"[WARN] Segmento excede max duration ({duration:.2f}s > {tempo_maximo}s). Cortando para {tempo_maximo}s.")
+                print(f"[WARNING] Segment too long ({duration:.2f}s > max {tempo_maximo}s) — trimming to {tempo_maximo}s.")
                 final_end_time = final_start_time + tempo_maximo
                 duration = tempo_maximo
 
@@ -503,7 +503,7 @@ def process_segments(raw_segments, transcript_segments, min_duration, max_durati
     print(f"[DEBUG] Finished processing. {len(all_segments)} segments valid.")
 
     if output_count and len(all_segments) > output_count:
-        print(f"Filtrando os top {output_count} segmentos de {len(all_segments)} candidatos encontrados nos chunks.")
+        print(f"  Keeping top {output_count} segments out of {len(all_segments)} candidates.")
         all_segments = all_segments[:output_count]
 
     final_result = {"segments": all_segments}
@@ -555,7 +555,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
                 if "g4f" in loaded_config: config["g4f"].update(loaded_config["g4f"])
                 if "selected_api" in loaded_config: config["selected_api"] = loaded_config["selected_api"]
         except Exception as e:
-            print(f"Erro ao ler api_config.json: {e}")
+            print(f"[WARNING] Failed to read api_config.json: {e}")
 
     # Config Vars
     current_chunk_size = 15000
@@ -583,7 +583,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
         with open(prompt_path, 'r', encoding='utf-8') as f:
             system_prompt_template = f.read()
     else:
-        print("Aviso: prompt.txt não encontrado. Usando prompt interno.")
+        print("[WARNING] prompt.txt not found. Using built-in prompt.")
         system_prompt_template = """You are a World-Class Viral Video Editor.
 {context_instruction}
 Analyze the transcript below with time tags (XXs). Find {amount} viral segments.
@@ -689,7 +689,7 @@ OUTPUT JSON ONLY:
 
     all_raw_segments = []
 
-    print(f"Processando {len(output_texts)} chunks usando modo: {ai_mode.upper()}")
+    print(f"  Processing {len(output_texts)} chunk(s) with {ai_mode.upper()}...")
 
     local_llm_instance = None
     if ai_mode == "local":
@@ -725,21 +725,21 @@ OUTPUT JSON ONLY:
             with open(manual_prompt_path, "w", encoding="utf-8") as f:
                 f.write(prompt)
         except Exception as e:
-            print(f"[ERRO] Falha ao salvar prompt.txt: {e}")
+            print(f"[WARNING] Failed to save prompt file: {e}")
         
         if ai_mode == "manual":
             print(f"\n[INFO] O prompt foi salvo em: {manual_prompt_path}")
             print("\n" + "="*60)
             print(f"CHUNK {i+1}/{len(output_texts)}")
             print("="*60)
-            print("COPIE O PROMPT ABAIXO (OU DO ARQUIVO GERADO) E COLE NA SUA IA PREFERIDA:")
+            print("PASTE THE PROMPT BELOW (OR USE THE SAVED FILE) INTO YOUR AI OF CHOICE:")
             print("-" * 20)
             print(prompt)
             print("-" * 20)
             print("="*60)
-            print("Cole o JSON de resposta abaixo e pressione ENTER.")
-            print("Dica: Se o JSON tiver múltiplas linhas, tente colar tudo de uma vez ou minificado.")
-            print("Se preferir, digite 'file' para ler de um arquivo 'tmp/response.json'.")
+            print("Paste the JSON response below and press ENTER.")
+            print("Tip: If the JSON spans multiple lines, try pasting it all at once or minified.")
+            print("Alternatively, type 'file' to read from 'tmp/response.json'.")
             
             user_input = input("JSON ou 'file': ")
             
@@ -749,11 +749,11 @@ OUTPUT JSON ONLY:
                     with open(response_json_path, 'r', encoding='utf-8') as rf:
                         response_text = rf.read()
                 except FileNotFoundError:
-                    print(f"Arquivo {response_json_path} não encontrado.")
+                    print(f"[ERROR] File not found: {response_json_path}")
             else:
                 response_text = user_input
                 if response_text.strip().startswith("{") and not response_text.strip().endswith("}"):
-                    print("Parece incompleto. Cole o resto e dê Enter (ou Ctrl+C para cancelar):")
+                    print("Response appears incomplete. Paste the rest and press Enter (or Ctrl+C to cancel):")
                     try:
                         rest = sys.stdin.read() 
                         response_text += rest
@@ -761,10 +761,10 @@ OUTPUT JSON ONLY:
                         pass
 
         elif ai_mode == "gemini":
-            print(f"Enviando chunk {i+1} para o Gemini (Model: {model_name})...")
+            print(f"  Sending chunk {i+1}/{len(output_texts)} to Gemini (model: {model_name})...")
             response_text = call_gemini(prompt, api_key, model_name=model_name)
         elif ai_mode == "g4f":
-            print(f"Enviando chunk {i+1} para o G4F (Model: {model_name})...")
+            print(f"  Sending chunk {i+1}/{len(output_texts)} to G4F (model: {model_name})...")
             response_text = call_g4f(prompt, model_name=model_name)
         elif ai_mode == "local" and local_llm_instance:
             print(f"Processing chunk {i+1} with Local LLM...")
@@ -795,12 +795,12 @@ OUTPUT JSON ONLY:
         try:
             data = clean_json_response(response_text)
             chunk_segments = data.get("segments", [])
-            print(f"Encontrados {len(chunk_segments)} segmentos neste chunk.")
+            print(f"  Found {len(chunk_segments)} segment(s) in this chunk.")
             all_raw_segments.extend(chunk_segments)
         except json.JSONDecodeError:
-            print(f"Erro: Resposta inválida.")
+            print(f"[ERROR] Invalid JSON response from AI.")
         except Exception as e:
-            print(f"Erro desconhecido ao processar chunk: {e}")
+            print(f"[ERROR] Unexpected error processing chunk: {e}")
 
     # Call the alignment / processing logic
     return process_segments(
