@@ -217,8 +217,12 @@ def download(url, base_root="VIRALS", download_subs=True, quality="best"):
     try:
         import glob
         # Pega a primeira que encontrar
-        potential_subs = glob.glob(os.path.join(project_folder, "input.*.vtt")) + glob.glob(os.path.join(project_folder, "input.*.srt"))
-        
+        potential_subs = sorted(
+            glob.glob(os.path.join(project_folder, "input.*.vtt")) +
+            glob.glob(os.path.join(project_folder, "input.*.srt")),
+            key=lambda p: len(os.path.basename(p))  # shorter = more exact lang code (en < en-orig)
+        )
+
         if potential_subs:
             best_sub = potential_subs[0]
             ext = os.path.splitext(best_sub)[1]
