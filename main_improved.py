@@ -356,18 +356,20 @@ def main():
                     ai_backend = "manual"
 
         api_key = args.api_key
-        # Check config for API Key if using Gemini
+        # Priority: CLI arg > env var GEMINI_API_KEY > api_config.json
+        if ai_backend == "gemini" and not api_key:
+            api_key = os.environ.get("GEMINI_API_KEY", "")
         if ai_backend == "gemini" and not api_key:
             cfg_key = api_config.get("gemini", {}).get("api_key", "")
-            if cfg_key and cfg_key != "SUA_KEY_AQUI":
+            if cfg_key and cfg_key not in ("", "SUA_KEY_AQUI"):
                 api_key = cfg_key
-        
+
         if ai_backend == "gemini" and not api_key:
-             if args.skip_prompts:
-                 print(i18n("Gemini API key missing, but skip-prompts is ON. Might fail."))
-             else:
-                 print(i18n("Gemini API Key not found in api_config.json or arguments."))
-                 api_key = input(i18n("Enter your Gemini API Key: ")).strip()
+            if args.skip_prompts:
+                print("[WARNING] Gemini API key missing and skip-prompts is ON — pipeline may fail.")
+            else:
+                print("[ERROR] Gemini API key not found in args, GEMINI_API_KEY env var, or api_config.json.")
+                api_key = input("Enter your Gemini API Key: ").strip()
 
     # Workflow & Face Config Inputs
     workflow_choice = args.workflow

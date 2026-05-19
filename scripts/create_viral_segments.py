@@ -538,8 +538,8 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
         "selected_api": "gemini",
         "gemini": {
             "api_key": "",
-            "model": "gemini-2.5-flash-lite-preview-09-2025",
-            "chunk_size": 15000
+            "model": "gemini-2.0-flash",
+            "chunk_size": 20000
         },
         "g4f": {
             "model": "gpt-4o-mini",
@@ -558,15 +558,19 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
             print(f"[WARNING] Failed to read api_config.json: {e}")
 
     # Config Vars
-    current_chunk_size = 15000
+    current_chunk_size = 20000
     model_name = ""
-    
+
     if ai_mode == "gemini":
-        cfg_chunk = config["gemini"].get("chunk_size", 15000)
+        cfg_chunk = config["gemini"].get("chunk_size", 20000)
         current_chunk_size = chunk_size_arg if chunk_size_arg and int(chunk_size_arg) > 0 else cfg_chunk
-        cfg_model = config["gemini"].get("model", "gemini-2.5-flash-lite-preview-09-2025")
+        cfg_model = config["gemini"].get("model", "gemini-2.0-flash")
         model_name = model_name_arg if model_name_arg else cfg_model
-        if not api_key: api_key = config["gemini"].get("api_key", "")
+        # Priority: arg > env var GEMINI_API_KEY > api_config.json
+        if not api_key:
+            api_key = os.environ.get("GEMINI_API_KEY", "") or config["gemini"].get("api_key", "")
+        masked = api_key[:8] + "***" + api_key[-4:] if api_key and len(api_key) > 12 else "NOT SET"
+        print(f"  Gemini key: {masked}  |  model: {model_name}")
             
     elif ai_mode == "g4f":
         cfg_chunk = config["g4f"].get("chunk_size", 2000)
