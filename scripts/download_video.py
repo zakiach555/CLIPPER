@@ -133,7 +133,7 @@ def download(url, base_root="VIRALS", download_subs=True, quality="best"):
         # Subtitle options
         'writesubtitles': download_subs,
         'writeautomaticsub': download_subs,
-        'subtitleslangs': ['pt.*', 'en.*', 'sp.*'],
+        'subtitleslangs': ['en', 'en.*', 'ar', 'ar.*', 'fr', 'fr.*', 'es', 'es.*', 'pt', 'pt.*'],
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },

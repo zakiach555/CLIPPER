@@ -4,6 +4,9 @@
 # Downloaded videos and projects
 VIRALS/
 
+# API keys - never commit these
+api_config.json
+
 # Temp files
 tmp/
 *.temp.*
