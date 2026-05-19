@@ -8,11 +8,14 @@ _WORKING_DIR  = os.path.dirname(_SCRIPTS_DIR)
 _CUSTOM_FONTS = os.path.join(_WORKING_DIR, "arfonts-lyon-arabic-display_all")
 
 def _safe_fonts_dir():
-    """Copy custom fonts to a path guaranteed to have no spaces.
-    libass on Windows truncates fontsdir at the first space, so paths like
-    'C:/Users/ABDENNOUR ACHOUR/...' silently break font lookup."""
-    drive = os.path.splitdrive(_WORKING_DIR)[0] or "C:"
-    safe = os.path.join(drive + "\\", "vcfonts")
+    """Copy custom fonts to a space-free path for reliable libass lookup.
+    On Windows, libass truncates fontsdir at the first space.
+    On Linux (Colab), use /tmp/vcfonts."""
+    if os.name == 'nt':
+        drive = os.path.splitdrive(_WORKING_DIR)[0] or "C:"
+        safe = os.path.join(drive + "\\", "vcfonts")
+    else:
+        safe = "/tmp/vcfonts"
     os.makedirs(safe, exist_ok=True)
     if os.path.isdir(_CUSTOM_FONTS):
         for fname in os.listdir(_CUSTOM_FONTS):
@@ -26,10 +29,19 @@ def burn_video_file(video_path, subtitle_path, output_path):
     """
     Burns subtitles into a single video file.
     """
-    subtitle_file_ffmpeg = subtitle_path.replace('\\', '/').replace(':', '\\:')
+    # Normalize path separators and escape ffmpeg filter special characters.
+    # Also escape apostrophes — they break single-quoted filter args (e.g. "Duolingo's").
+    def _ffmpeg_escape(path):
+        p = path.replace('\\', '/')
+        if os.name == 'nt':
+            p = p.replace(':', '\\:')
+        p = p.replace("'", "\\'")
+        return p
+
+    subtitle_file_ffmpeg = _ffmpeg_escape(subtitle_path)
 
     # Ensure fonts live at a space-free path so libass can find them reliably.
-    fonts_dir = _safe_fonts_dir().replace('\\', '/').replace(':', '\\:')
+    fonts_dir = _ffmpeg_escape(_safe_fonts_dir())
     sub_filter = f"subtitles='{subtitle_file_ffmpeg}':fontsdir='{fonts_dir}'"
 
     def run_ffmpeg(encoder, preset, additional_args=[]):
