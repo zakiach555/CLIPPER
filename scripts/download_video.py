@@ -29,7 +29,7 @@ def progress_hook(d):
         except:
             pass
     elif d['status'] == 'finished':
-        print(f"[download] Download concluído: {d['filename']}", flush=True)
+        print(f"[download] Done: {d['filename']}", flush=True)
 
 def download(url, base_root="VIRALS", download_subs=True, quality="best"):
     # 1. Extrair informações do vídeo para pegar o título

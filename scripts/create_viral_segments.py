@@ -368,7 +368,7 @@ def process_segments(raw_segments, transcript_segments, min_duration, max_durati
     # --- POST-PROCESSING: Match Text to Timestamps ---
     processed_segments = []
     
-    print(f"[DEBUG] Matching {len(all_segments)} raw segments to timestamps...")
+    print(f"  Matching {len(all_segments)} segments to timestamps...")
     
     for seg in all_segments:
         try:
@@ -494,13 +494,13 @@ def process_segments(raw_segments, transcript_segments, min_duration, max_durati
                 intersection = overlap_end - overlap_start
                 if intersection > 5: # more than 5 seconds overlap
                     is_dup = True
-                    print(f"[DEBUG] Dropping overlap: '{candidate.get('title')}' ({s1:.1f}-{e1:.1f}) overlaps with '{existing.get('title')}' ({s2:.1f}-{e2:.1f}) by {intersection:.1f}s")
+                    print(f"  [SKIP] Overlap: '{candidate.get('title')}' ({s1:.1f}-{e1:.1f}s) overlaps by {intersection:.1f}s")
                     break
         if not is_dup:
             unique_segments.append(candidate)
 
     all_segments = unique_segments
-    print(f"[DEBUG] Finished processing. {len(all_segments)} segments valid.")
+    print(f"  {len(all_segments)} valid segments after deduplication.")
 
     if output_count and len(all_segments) > output_count:
         print(f"  Keeping top {output_count} segments out of {len(all_segments)} candidates.")
@@ -622,7 +622,7 @@ OUTPUT JSON ONLY:
     start = 0
     content_len = len(content)
 
-    print(f"[DEBUG] Chunking content (Size: {content_len}) with Chunk Size: {chunk_size} and Overlap: {overlap_size}")
+    print(f"  Content size: {content_len} chars | chunk: {chunk_size} | overlap: {overlap_size}")
 
     while start < content_len:
         end = min(start + chunk_size, content_len)
@@ -791,7 +791,7 @@ OUTPUT JSON ONLY:
             raw_response_path = os.path.join(project_folder, f"response_raw_part_{i+1}.txt")
             with open(raw_response_path, "w", encoding="utf-8") as f:
                 f.write(response_text)
-            print(f"[DEBUG] Raw response saved to: {raw_response_path}")
+            print(f"  Raw response saved to: {raw_response_path}")
         except Exception as e:
             print(f"[WARN] Failed to save raw response: {e}")
 
