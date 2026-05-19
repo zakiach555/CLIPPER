@@ -290,6 +290,39 @@ def call_deepseek(prompt, api_key, model_name='deepseek-chat'):
     return "{}"
 
 
+def call_qwen(prompt, api_key, model_name='qwen-plus'):
+    if not HAS_OPENAI:
+        raise ImportError("The 'openai' library is not installed. Install it with: pip install openai")
+
+    client = _OpenAI(api_key=api_key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
+
+    max_retries = 5
+    base_wait = 30
+
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+            )
+            return response.choices[0].message.content or "{}"
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "rate" in error_str.lower():
+                wait_time = base_wait * (attempt + 1)
+                print(f"[429] Qwen rate limit. Waiting {wait_time}s before retry {attempt+1}/{max_retries}...", flush=True)
+                time.sleep(wait_time)
+                continue
+            else:
+                print(f"[ERROR] Qwen API error: {e}")
+                return "{}"
+
+    print("[ERROR] Qwen: all retry attempts failed.")
+    return "{}"
+
+
 def call_g4f(prompt, model_name="gpt-4o-mini"):
     if not HAS_G4F:
         raise ImportError("The 'g4f' library is not installed. Install it with: pip install g4f")
@@ -585,6 +618,11 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
             "model": "deepseek-chat",
             "chunk_size": 20000
         },
+        "qwen": {
+            "api_key": "",
+            "model": "qwen-plus",
+            "chunk_size": 20000
+        },
         "g4f": {
             "model": "gpt-4o-mini",
             "chunk_size": 2000
@@ -597,6 +635,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
                 loaded_config = json.load(f)
                 if "gemini" in loaded_config: config["gemini"].update(loaded_config["gemini"])
                 if "deepseek" in loaded_config: config["deepseek"].update(loaded_config["deepseek"])
+                if "qwen" in loaded_config: config["qwen"].update(loaded_config["qwen"])
                 if "g4f" in loaded_config: config["g4f"].update(loaded_config["g4f"])
                 if "selected_api" in loaded_config: config["selected_api"] = loaded_config["selected_api"]
         except Exception as e:
@@ -626,6 +665,16 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo, ai_mode
             api_key = os.environ.get("DEEPSEEK_API_KEY", "") or config["deepseek"].get("api_key", "")
         masked = api_key[:8] + "***" + api_key[-4:] if api_key and len(api_key) > 12 else "NOT SET"
         print(f"  DeepSeek key: {masked}  |  model: {model_name}")
+
+    elif ai_mode == "qwen":
+        cfg_chunk = config["qwen"].get("chunk_size", 20000)
+        current_chunk_size = chunk_size_arg if chunk_size_arg and int(chunk_size_arg) > 0 else cfg_chunk
+        cfg_model = config["qwen"].get("model", "qwen-plus")
+        model_name = model_name_arg if model_name_arg else cfg_model
+        if not api_key:
+            api_key = os.environ.get("QWEN_API_KEY", "") or config["qwen"].get("api_key", "")
+        masked = api_key[:8] + "***" + api_key[-4:] if api_key and len(api_key) > 12 else "NOT SET"
+        print(f"  Qwen key: {masked}  |  model: {model_name}")
 
     elif ai_mode == "g4f":
         cfg_chunk = config["g4f"].get("chunk_size", 2000)
@@ -825,6 +874,9 @@ OUTPUT JSON ONLY:
         elif ai_mode == "deepseek":
             print(f"  Sending chunk {i+1}/{len(output_texts)} to DeepSeek (model: {model_name})...")
             response_text = call_deepseek(prompt, api_key, model_name=model_name)
+        elif ai_mode == "qwen":
+            print(f"  Sending chunk {i+1}/{len(output_texts)} to Qwen (model: {model_name})...")
+            response_text = call_qwen(prompt, api_key, model_name=model_name)
         elif ai_mode == "g4f":
             print(f"  Sending chunk {i+1}/{len(output_texts)} to G4F (model: {model_name})...")
             response_text = call_g4f(prompt, model_name=model_name)

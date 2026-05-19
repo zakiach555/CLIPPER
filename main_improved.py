@@ -369,8 +369,14 @@ def main():
             cfg_key = api_config.get("deepseek", {}).get("api_key", "")
             if cfg_key:
                 api_key = cfg_key
+        if ai_backend == "qwen" and not api_key:
+            api_key = os.environ.get("QWEN_API_KEY", "")
+        if ai_backend == "qwen" and not api_key:
+            cfg_key = api_config.get("qwen", {}).get("api_key", "")
+            if cfg_key:
+                api_key = cfg_key
 
-        if ai_backend in ("gemini", "deepseek") and not api_key:
+        if ai_backend in ("gemini", "deepseek", "qwen") and not api_key:
             if args.skip_prompts:
                 print(f"[WARNING] {ai_backend} API key missing and skip-prompts is ON — pipeline may fail.")
             else:

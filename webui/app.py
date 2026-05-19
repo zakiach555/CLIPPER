@@ -115,6 +115,14 @@ DEEPSEEK_MODELS = [
     'deepseek-reasoner',
 ]
 
+QWEN_MODELS = [
+    'qwen-plus',
+    'qwen-max',
+    'qwen-turbo',
+    'qwen-long',
+    'qwen2.5-72b-instruct',
+]
+
 G4F_MODELS = [
     'gpt-4o',
     'gpt-4o-mini',
@@ -406,7 +414,7 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                         max_dur_input = gr.Number(label=i18n("Max Duration (s)"), value=90)
                 with gr.Column(scale=1):
                     with gr.Row():
-                        ai_backend_input = gr.Dropdown(choices=[(i18n("Gemini"), "gemini"), ("DeepSeek", "deepseek"), (i18n("G4F"), "g4f"), (i18n("Local (GGUF)"), "local"), (i18n("Manual"), "manual")], label=i18n("AI Backend"), value="gemini", scale=2)
+                        ai_backend_input = gr.Dropdown(choices=[(i18n("Gemini"), "gemini"), ("DeepSeek", "deepseek"), ("Qwen", "qwen"), (i18n("G4F"), "g4f"), (i18n("Local (GGUF)"), "local"), (i18n("Manual"), "manual")], label=i18n("AI Backend"), value="gemini", scale=2)
                         _default_api_key = os.environ.get("GEMINI_API_KEY", "")
                         if not _default_api_key:
                             try:
@@ -425,7 +433,7 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                     
                     # Update listeners with logic to hide/show API key
                     def update_ai_ui(backend):
-                        show_api = (backend in ("gemini", "deepseek"))
+                        show_api = (backend in ("gemini", "deepseek", "qwen"))
                         show_refresh = (backend == "local")
 
                         new_choices = []
@@ -439,6 +447,10 @@ with gr.Blocks(title=i18n("ViralCutter WebUI"), theme=gr.themes.Default(primary_
                         elif backend == "deepseek":
                             new_choices = DEEPSEEK_MODELS
                             new_val = "deepseek-chat"
+                            new_chunk = 20000
+                        elif backend == "qwen":
+                            new_choices = QWEN_MODELS
+                            new_val = "qwen-plus"
                             new_chunk = 20000
                         elif backend == "g4f":
                             new_choices = G4F_MODELS
